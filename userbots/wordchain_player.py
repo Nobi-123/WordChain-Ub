@@ -1,37 +1,80 @@
-# userbots/wordchain_player.py - Telethon userbot logic (simplified)
-import asyncio, random, re, string, os
+# userbots/wordchain_player.py — Regex smart detection version
+import asyncio
+import random
+import re
+import string
 from telethon import TelegramClient, events
 from telethon.sessions import StringSession
 import config
 
+# Load dictionary
 def import_words(path):
-    words = []
     try:
-        with open(path, 'r', encoding='utf-8') as f:
-            for line in f:
-                w = line.strip()
-                if w:
-                    words.append(w.lower())
+        with open(path, "r", encoding="utf-8") as f:
+            return [w.strip().lower() for w in f if w.strip()]
     except FileNotFoundError:
-        pass
-    return words
+        print("❌ words.txt not found!")
+        return []
 
-async def play_loop(client, words_path, user_id):
-    dictionary = import_words(words_path)
-    # minimal handler for messages in groups
+# Word selector
+def get_word(dictionary, prefix, include="", banned=None, min_len=3):
+    banned = banned or []
+    valid = [
+        w for w in dictionary
+        if w.startswith(prefix)
+        and (not include or include in w)
+        and all(bl not in w for bl in banned)
+        and len(w) >= min_len
+    ]
+    return random.choice(valid) if valid else None
+
+async def start_game_logic(client, words):
+    delay = 2.5
+    banned_letters = []
+    min_length = 3
+
     @client.on(events.NewMessage)
-    async def handler(event):
-        # basic logic: if it's our turn, send a random word
-        txt = event.raw_text or ''
-        if 'Your word must start with' in txt or 'Turn:' in txt:
-            # choose a random word and send
-            if dictionary:
-                await asyncio.sleep(2.5)
-                await client.send_message(event.chat_id, random.choice(dictionary))
-    # run until disconnected
+    async def on_message(event):
+        text = event.raw_text or ""
+        if not text:
+            return
+
+        # Detect banned letters
+        if "Banned letters:" in text:
+            bl = re.findall(r"[A-Za-z]", text.split("Banned letters:")[-1])
+            banned_letters[:] = [b.lower() for b in bl]
+            print(f"🚫 Banned letters: {banned_letters}")
+
+        # Detect min length
+        m = re.search(r"at least (\d+) letters", text, re.IGNORECASE)
+        if m:
+            min_length = int(m.group(1))
+            print(f"🔤 Minimum length: {min_length}")
+
+        # Detect "include X"
+        include_match = re.search(r"include[^A-Za-z]*([A-Za-z])", text, re.IGNORECASE)
+        include = include_match.group(1).lower() if include_match else ""
+
+        # ✅ Detect any "start with X" phrase (robust to formatting)
+        prefix_match = re.search(r"start[^A-Za-z]*with[^A-Za-z]*([A-Za-z])", text, re.IGNORECASE)
+        if prefix_match:
+            prefix = prefix_match.group(1).lower()
+            word = get_word(words, prefix, include, banned_letters, min_length)
+            if word:
+                await asyncio.sleep(delay)
+                await client.send_message(event.chat_id, word)
+                print(f"💬 Sent word: {word}")
+            else:
+                print(f"⚠️ No valid word found for prefix='{prefix}', include='{include}'")
+
+async def _start_userbot(session_string, user_id):
+    client = TelegramClient(StringSession(session_string), config.API_ID, config.API_HASH)
+    await client.start()
+    print(f"✅ Userbot started for user {user_id}")
+    words = import_words(config.WORDS_PATH)
+    await start_game_logic(client, words)
     await client.run_until_disconnected()
 
-async def start_userbot(string_session, user_id):
-    client = TelegramClient(StringSession(string_session), config.API_ID, config.API_HASH)
-    await client.start()
-    await play_loop(client, config.WORDS_PATH, user_id)
+def start_userbot(session_string, user_id):
+    loop = asyncio.get_event_loop()
+    loop.create_task(_start_userbot(session_string, user_id))

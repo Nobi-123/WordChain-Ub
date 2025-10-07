@@ -1,0 +1,43 @@
+{
+  "name": "Telegram Bot",
+  "description": "A Telegram bot powered by Pyrogram.",
+  "repository": "https://github.com/Nobi-123/WordChain-Ub",
+  "keywords": ["telegram", "pyrogram", "bot"],
+  "env": {
+    "BOT_TOKEN": {
+      "description": "Your Telegram Bot Token from @BotFather",
+      "value": ""
+    },
+    "API_ID": {
+      "description": "Your Telegram API ID from https://my.telegram.org",
+      "value": "29308061"
+    },
+    "API_HASH": {
+      "description": "Your Telegram API Hash from https://my.telegram.org",
+      "value": "462de3dfc98fd938ef9c6ee31a72d099"
+    },
+    "OWNER_ID": {
+      "description": "Telegram user ID of the bot owner",
+      "value": "8315954262"
+    },
+    "SUPPORT_CHAT": {
+      "description": "Support group link",
+      "value": "https://t.me/TNCmeetup"
+    },
+    "SUPPORT_CHANNEL": {
+      "description": "Support channel link",
+      "value": "https://t.me/TechNodeCoders"
+    },
+    "START_IMAGE": {
+      "description": "Path or URL to start banner image",
+      "value": "assets/start_banner.jpg"
+    }
+  },
+  "formation": {
+    "worker": {
+      "quantity": 1,
+      "size": "free"
+    }
+  },
+  "stack": "container"
+}

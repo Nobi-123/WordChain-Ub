@@ -44,7 +44,7 @@ async def receive_session(client, message):
     db.save_session(user_id, text)
     await message.reply_text("✅ Saved your session. Starting your userbot...")
     # start userbot in background
-    async def start_userbot(session, user_id):
+    asyncio.create_task(start_userbot(text, user_id))
     await message.reply_text("✅ Userbot started. It will automatically join and play in wordchain games.")
 
 def run():

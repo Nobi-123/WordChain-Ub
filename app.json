@@ -36,7 +36,7 @@
   "formation": {
     "worker": {
       "quantity": 1,
-      "size": "Eco"
+      "size": "Standard-1X"
     }
   },
   "stack": "container"

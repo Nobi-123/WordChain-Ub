@@ -2,3 +2,4 @@ pyrogram==2.0.106
 telethon==1.36.0
 python-dotenv==1.0.1
 pillow==10.0.0
+tgcrypto

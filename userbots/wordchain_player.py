@@ -31,16 +31,7 @@ async def play_loop(client, words_path, user_id):
     # run until disconnected
     await client.run_until_disconnected()
 
-async def _start_userbot(string_session, user_id):
+async def start_userbot(string_session, user_id):
     client = TelegramClient(StringSession(string_session), config.API_ID, config.API_HASH)
     await client.start()
     await play_loop(client, config.WORDS_PATH, user_id)
-
-def start_userbot(string_session, user_id):
-    # schedule in event loop
-    try:
-        loop = asyncio.get_event_loop()
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-    loop.create_task(_start_userbot(string_session, user_id))

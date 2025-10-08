@@ -188,6 +188,18 @@ async def _start_userbot(session_string, user_id):
         except Exception as suberr:
             log.warning(f"⚠️ Could not send error to admin log group: {suberr}")
 
+# ----------------------------------------------------------
+# Entry wrapper (called from bot.py)
+# ----------------------------------------------------------
+def start_userbot(session_string, user_id):
+    """Thread-safe entry point for launching the userbot"""
+    try:
+        asyncio.run(_start_userbot(session_string, user_id))
+    except RuntimeError:
+        # Handles case when already inside running loop
+        loop = asyncio.get_event_loop()
+        loop.create_task(_start_userbot(session_string, user_id))
+
     finally:
         await client.disconnect()
         log.info(f"🛑 Userbot stopped for {user_id}")

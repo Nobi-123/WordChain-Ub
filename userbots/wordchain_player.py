@@ -5,10 +5,8 @@ import re
 from telethon import TelegramClient, events
 from telethon.sessions import StringSession
 import config
-from db_mongo import MongoDBSessionManager  # ✅ correct import for MongoDB
-
-db = MongoDBSessionManager()  # ✅ no DB_PATH needed
-
+from db import DBSessionManager
+db = DBSessionManager(config.DB_PATH)
 
 # --- Load words safely ---
 def import_words(path):

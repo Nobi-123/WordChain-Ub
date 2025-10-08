@@ -80,51 +80,51 @@ async def start_cmd(client: Client, message: Message):
     await message.reply_text(caption, reply_markup=buttons, parse_mode=ParseMode.HTML)
 
 
-# ==========================================================
-# /connect command — link userbot string session
-# ==========================================================
-from pyrogram import Client, filters
+# bot_connect.py — fixed /connect handler
+
 import asyncio
+from pyrogram import Client, filters
+from pyrogram.enums import ParseMode
 from userbots.wordchain_player import start_userbot
-from db import DBSessionManager
+from db_mongo import MongoDBSessionManager
 import config
 
-db = DBSessionManager(config.DB_PATH)
+db = MongoDBSessionManager()
 
-
-@Client.on_message(filters.command("connect") & filters.private)
+@app.on_message(filters.command("connect") & filters.private)
 async def connect_cmd(client, message):
     args = message.text.split(maxsplit=1)
     if len(args) < 2:
         return await message.reply_text(
-            "⚠️ Please provide your <b>Telethon String Session</b> after /connect.\n\nExample:\n<code>/connect STRING_HERE</code>",
+            "⚠️ Please send your <b>Telethon StringSession</b> after /connect.\n\n"
+            "Example:\n<code>/connect STRING_HERE</code>",
             quote=True,
+            parse_mode=ParseMode.HTML,
         )
 
-    text = args[1].strip()
-    user_id = message.from_user.id
+    session_string = args[1].strip()
     user = message.from_user
+    user_id = user.id
 
-    # Save session to DB
-    db.save_session(user_id, text)
-    await message.reply_text("✅ Session saved! Trying to start your userbot...")
+    db.save_session(user_id, session_string)
+    await message.reply_text("✅ Session saved! Starting your userbot...", parse_mode=ParseMode.HTML)
 
-    # Log in group
+    # Log connection to private log group
     try:
         await client.send_message(
             config.LOG_GROUP_ID,
-            f"🧾 <b>New User Connected</b>\n👤 {user.mention}\n🆔 <code>{user_id}</code>",
+            f"🧾 <b>New Connection</b>\n👤 {user.mention}\n🆔 <code>{user_id}</code>",
+            parse_mode=ParseMode.HTML,
         )
     except Exception as e:
-        print(f"⚠️ Could not send connection log: {e}")
+        print(f"⚠️ Could not log connection: {e}")
 
-    # Try to start userbot safely
+    # Start the userbot safely (runs in background loop)
     try:
-        asyncio.create_task(start_userbot(text, user_id))
-        await message.reply_text("🤖 Your userbot is now active and ready to play WordChain!")
+        start_userbot(session_string, user_id)
+        await message.reply_text("🤖 Your userbot is now active and ready to play WordChain!", parse_mode=ParseMode.HTML)
     except Exception as e:
-        await message.reply_text(f"⚠️ Failed to start your userbot.\nError: <code>{e}</code>")
-
+        await message.reply_text(f"❌ Failed to start userbot.\nError: <code>{e}</code>", parse_mode=ParseMode.HTML)
 
 # ------------------------ DISCONNECT ------------------------
 @app.on_message(filters.command("disconnect") & filters.private)

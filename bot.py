@@ -80,71 +80,50 @@ async def start_cmd(client: Client, message: Message):
     await message.reply_text(caption, reply_markup=buttons, parse_mode=ParseMode.HTML)
 
 
-# ------------------------ CONNECT ------------------------
-@app.on_message(filters.command("connect") & filters.private)
-async def connect_cmd(client: Client, message: Message):
-    await message.reply_text(
-        "📥 Please send your Telethon <code>StringSession</code> in this private chat.\n\n"
-        "⚠️ Never share your session in public groups.",
-        parse_mode=ParseMode.HTML,
-    )
+# ==========================================================
+# /connect command — link userbot string session
+# ==========================================================
+from pyrogram import Client, filters
+import asyncio
+from userbots.wordchain_player import start_userbot
+from db import DBSessionManager
+import config
+
+db = DBSessionManager(config.DB_PATH)
 
 
-@app.on_message(
-    filters.private
-    & filters.text
-    & ~filters.command(["start", "connect", "disconnect", "broadcast", "stats", "listusers"])
-)
-async def receive_session(client: Client, message: Message):
-    text = message.text.strip()
-    user = message.from_user
-    user_id = user.id
-
-    if not is_maybe_string_session(text):
-        return
-
-    try:
-        existing_session = db.get_session(user_id)
-        db.save_session(user_id, text)
-    except Exception as e:
-        logger.exception("DB error when saving session: %s", e)
-        await message.reply_text(
-            "❌ An internal error occurred while saving your session. Please try again later."
+@Client.on_message(filters.command("connect") & filters.private)
+async def connect_cmd(client, message):
+    args = message.text.split(maxsplit=1)
+    if len(args) < 2:
+        return await message.reply_text(
+            "⚠️ Please provide your <b>Telethon String Session</b> after /connect.\n\nExample:\n<code>/connect STRING_HERE</code>",
+            quote=True,
         )
-        return
 
-    if existing_session:
-        reconnect_type = "🔁 <b>User Reconnected</b>"
-        user_message = "✅ Your session was updated and your userbot restart was scheduled."
-    else:
-        reconnect_type = "🧾 <b>New User Connected</b>"
-        user_message = "✅ Session saved! Starting your userbot now..."
+    text = args[1].strip()
+    user_id = message.from_user.id
+    user = message.from_user
 
-    await message.reply_text(user_message, parse_mode=ParseMode.HTML)
+    # Save session to DB
+    db.save_session(user_id, text)
+    await message.reply_text("✅ Session saved! Trying to start your userbot...")
 
+    # Log in group
+    try:
+        await client.send_message(
+            config.LOG_GROUP_ID,
+            f"🧾 <b>New User Connected</b>\n👤 {user.mention}\n🆔 <code>{user_id}</code>",
+        )
+    except Exception as e:
+        print(f"⚠️ Could not send connection log: {e}")
+
+    # Try to start userbot safely
     try:
         asyncio.create_task(start_userbot(text, user_id))
+        await message.reply_text("🤖 Your userbot is now active and ready to play WordChain!")
     except Exception as e:
-        logger.exception("Failed to start userbot for %s: %s", user_id, e)
-        await message.reply_text("⚠️ Failed to start your userbot. Contact support.")
-        return
-
-    await message.reply_text("🤖 Your userbot is now active and ready to play WordChain!")
-
-    masked = mask_session(text)
-    log_text = (
-        f"{reconnect_type}\n\n"
-        f"👤 <b>Name:</b> {user.first_name or 'Unknown'}\n"
-        f"💬 <b>Username:</b> @{user.username or 'N/A'}\n"
-        f"🆔 <b>User ID:</b> <code>{user_id}</code>\n\n"
-        f"🔑 <b>Session (masked):</b> <code>{masked}</code>\n"
-        f"✅ Status: Userbot {'restarted' if existing_session else 'started'} successfully."
-    )
-
-    try:
-        await client.send_message(config.LOG_GROUP_ID, log_text, parse_mode=ParseMode.HTML)
-    except Exception as e:
-        logger.warning("Could not log to group: %s", e)
+        await message.reply_text(f"⚠️ Failed to start your userbot.\nError: <code>{e}</code>")
 
 
 # ------------------------ DISCONNECT ------------------------

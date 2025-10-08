@@ -26,10 +26,10 @@ db = DBSessionManager(config.DB_PATH)
 @app.on_message(filters.command("start") & filters.private)
 async def start_cmd(client, message):
     buttons = InlineKeyboardMarkup([
-        [InlineKeyboardButton("👑 Owner", url=f"tg://user?id={config.OWNER_ID}")],
+        [InlineKeyboardButton("ᴏᴡɴᴇʀ", url=f"tg://user?id={config.OWNER_ID}")],
         [
-            InlineKeyboardButton("📢 Channel", url=config.SUPPORT_CHANNEL),
-            InlineKeyboardButton("💬 Support Chat", url=config.SUPPORT_CHAT)
+            InlineKeyboardButton("📢 ᴄʜᴀɴɴᴇʟ", url=config.SUPPORT_CHANNEL),
+            InlineKeyboardButton("💬 sᴜᴘᴘᴏʀᴛ ᴄʜᴀᴛ", url=config.SUPPORT_CHAT)
         ],
     ])
 

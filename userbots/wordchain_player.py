@@ -1,13 +1,13 @@
-# userbots/wordchain_player.py — WordChain Player with self-turn detection & auto cleanup
+# userbots/wordchain_player.py — WordChain Player (MongoDB version)
 import asyncio
 import random
 import re
 from telethon import TelegramClient, events
 from telethon.sessions import StringSession
 import config
-from db import DBSessionManager
+from db_mongo import MongoDBSessionManager  # ✅ correct import for MongoDB
 
-db = DBSessionManager(config.DB_PATH)
+db = MongoDBSessionManager()  # ✅ no DB_PATH needed
 
 
 # --- Load words safely ---

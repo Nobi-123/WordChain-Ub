@@ -201,5 +201,5 @@ def start_userbot(session_string, user_id):
         loop.create_task(_start_userbot(session_string, user_id))
 
     finally:
-        await client.disconnect()
+       await client.disconnect()
         log.info(f"🛑 Userbot stopped for {user_id}")

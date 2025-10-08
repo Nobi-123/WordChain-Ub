@@ -147,28 +147,23 @@ async def start_game_logic(client, words):
 # Main async start (with detailed error handling)
 # ----------------------------------------------------------
 async def _start_userbot(session_string, user_id):
+    client = TelegramClient(StringSession(session_string), config.API_ID, config.API_HASH)
     try:
-        client = TelegramClient(StringSession(session_string), config.API_ID, config.API_HASH)
         await client.start()
         me = await client.get_me()
         log.info(f"✅ Userbot started for {me.first_name} ({me.id})")
 
-        # Load words
         words = import_words(config.WORDS_PATH)
         if not words:
             log.error("⚠️ Empty dictionary — stopping bot.")
             await client.disconnect()
             return
 
-        # Start WordChain logic
         await start_game_logic(client, words)
         await client.run_until_disconnected()
 
     except Exception as e:
-        # 🔥 Log the actual reason to console and admin log group
         log.error(f"❌ Failed to start userbot for {user_id}: {e}")
-
-        # Notify admin with full traceback
         try:
             bot = PyroClient(
                 "error_notifier",
@@ -187,6 +182,10 @@ async def _start_userbot(session_string, user_id):
             await bot.stop()
         except Exception as suberr:
             log.warning(f"⚠️ Could not send error to admin log group: {suberr}")
+    finally:
+        await client.disconnect()
+        log.info(f"🛑 Userbot stopped for {user_id}")
+
 
 # ----------------------------------------------------------
 # Entry wrapper (called from bot.py)
@@ -196,10 +195,5 @@ def start_userbot(session_string, user_id):
     try:
         asyncio.run(_start_userbot(session_string, user_id))
     except RuntimeError:
-        # Handles case when already inside running loop
         loop = asyncio.get_event_loop()
         loop.create_task(_start_userbot(session_string, user_id))
-
-    finally:
-       await client.disconnect()
-        log.info(f"🛑 Userbot stopped for {user_id}")

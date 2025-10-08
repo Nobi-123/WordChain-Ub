@@ -1,7 +1,5 @@
-# db_init.py - initialize DB (optional)
-from db import DBSessionManager
-import config
+# db/__init__.py — Package initializer for hybrid database (MongoDB + SQLite)
 
-if __name__ == '__main__':
-    DBSessionManager(config.DB_PATH)
-    print('DB initialized at', config.DB_PATH)
+from .manager import DBSessionManager
+
+__all__ = ["DBSessionManager"]

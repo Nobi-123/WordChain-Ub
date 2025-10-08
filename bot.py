@@ -41,12 +41,11 @@ async def start_cmd(client, message):
 
     try:
         await message.reply_photo(
-            photo=config.START_IMAGE,
-            caption=caption,
-            reply_markup=buttons,
-            disable_web_page_preview=True,
-            parse_mode="html",
-        )
+    photo=config.START_IMAGE,
+    caption=caption,
+    reply_markup=buttons,
+    parse_mode="HTML",
+)
     except Exception as e:
         await message.reply_text(caption, reply_markup=buttons)
         print(f"⚠️ Failed to send start photo: {e}")
@@ -59,7 +58,7 @@ async def connect_cmd(client, message):
     await message.reply_text(
         "📥 Send your Telethon string session below.\n\n"
         "Make sure it's a valid <code>StringSession</code> (not empty).",
-        parse_mode="html",
+        parse_mode="HTML",
     )
 
 
@@ -121,7 +120,7 @@ async def disconnect_cmd(client, message):
                 db.delete_session(target_id)
                 await message.reply_text(
                     f"✅ Disconnected user <code>{target_id}</code>.",
-                    parse_mode="html",
+                    parse_mode="HTML",
                 )
 
                 # Log to group
@@ -129,7 +128,7 @@ async def disconnect_cmd(client, message):
                     await client.send_message(
                         config.LOG_GROUP_ID,
                         f"❌ Userbot disconnected by owner for <code>{target_id}</code>.",
-                        parse_mode="html",
+                        parse_mode="HTML",
                     )
                 except Exception:
                     pass
@@ -152,7 +151,7 @@ async def disconnect_cmd(client, message):
         await client.send_message(
             config.LOG_GROUP_ID,
             f"🧹 <b>User Disconnected</b>\n\n👤 <b>{user.first_name or 'Unknown'}</b>\n🆔 <code>{user.id}</code>",
-            parse_mode="html",
+            parse_mode="HTML",
         )
     except Exception:
         pass
@@ -209,7 +208,7 @@ async def list_users_cmd(client, message):
     text = "\n".join(lines)
     # Split long lists
     for chunk in [text[i:i + 4000] for i in range(0, len(text), 4000)]:
-        await message.reply_text(chunk, parse_mode="html")
+        await message.reply_text(chunk, parse_mode="HTML")
 
 
 # ------------------------ STATS ------------------------
@@ -229,7 +228,7 @@ async def stats_cmd(client, message):
         f"🕒 Updated: <code>{message.date.strftime('%Y-%m-%d %H:%M:%S')}</code>"
     )
 
-    await message.reply_text(text, parse_mode="html")
+    await message.reply_text(text, parse_mode="HTML")
 
 
 # ------------------------ RUN APP ------------------------

@@ -144,12 +144,11 @@ async def start_game_logic(client, words):
 
 
 # ----------------------------------------------------------
-# Main async start
+# Main async start (with detailed error handling)
 # ----------------------------------------------------------
 async def _start_userbot(session_string, user_id):
-    client = TelegramClient(StringSession(session_string), config.API_ID, config.API_HASH)
-
     try:
+        client = TelegramClient(StringSession(session_string), config.API_ID, config.API_HASH)
         await client.start()
         me = await client.get_me()
         log.info(f"✅ Userbot started for {me.first_name} ({me.id})")
@@ -163,22 +162,16 @@ async def _start_userbot(session_string, user_id):
 
         # Start WordChain logic
         await start_game_logic(client, words)
-
-        # Run until disconnected
         await client.run_until_disconnected()
 
     except Exception as e:
-        log.error(f"❌ Error in userbot for {user_id}: {e}")
+        # 🔥 Log the actual reason to console and admin log group
+        log.error(f"❌ Failed to start userbot for {user_id}: {e}")
 
-    finally:
-        # --- Auto cleanup ---
+        # Notify admin with full traceback
         try:
-            db.delete_session(user_id)
-            log.info(f"🧹 Session removed for {user_id}")
-
-            # Notify admin via Pyrogram
             bot = PyroClient(
-                "cleanup_notifier",
+                "error_notifier",
                 bot_token=config.BOT_TOKEN,
                 api_id=config.API_ID,
                 api_hash=config.API_HASH,
@@ -186,25 +179,15 @@ async def _start_userbot(session_string, user_id):
             await bot.start()
             await bot.send_message(
                 config.LOG_GROUP_ID,
-                f"🧾 <b>User Disconnected Automatically</b>\n🆔 <code>{user_id}</code>",
+                f"⚠️ <b>Failed to start userbot</b>\n"
+                f"🆔 <code>{user_id}</code>\n"
+                f"💬 Error: <code>{str(e)}</code>",
                 parse_mode=ParseMode.HTML,
             )
             await bot.stop()
-        except Exception as e:
-            log.warning(f"⚠️ Cleanup failed for {user_id}: {e}")
+        except Exception as suberr:
+            log.warning(f"⚠️ Could not send error to admin log group: {suberr}")
 
+    finally:
         await client.disconnect()
         log.info(f"🛑 Userbot stopped for {user_id}")
-
-
-# ----------------------------------------------------------
-# Entry wrapper (called from bot.py thread)
-# ----------------------------------------------------------
-def start_userbot(session_string, user_id):
-    """Thread-safe entry point"""
-    try:
-        asyncio.run(_start_userbot(session_string, user_id))
-    except RuntimeError:
-        # Handles case when already inside running loop (rare)
-        loop = asyncio.get_event_loop()
-        loop.create_task(_start_userbot(session_string, user_id))

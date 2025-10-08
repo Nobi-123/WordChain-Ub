@@ -1,4 +1,4 @@
-# userbots/wordchain_player.py — Auto WordChain Player (Smart Detection)
+# userbots/wordchain_player.py — Smart WordChain Auto Player
 import asyncio
 import random
 import re
@@ -7,6 +7,9 @@ from telethon.sessions import StringSession
 import config
 
 
+# --------------------------
+# Load word dictionary
+# --------------------------
 def import_words(path):
     try:
         with open(path, "r", encoding="utf-8") as f:
@@ -16,6 +19,9 @@ def import_words(path):
         return []
 
 
+# --------------------------
+# Pick valid word
+# --------------------------
 def get_word(dictionary, prefix, include="", banned=None, min_len=3):
     banned = banned or []
     valid = [
@@ -28,16 +34,23 @@ def get_word(dictionary, prefix, include="", banned=None, min_len=3):
     return random.choice(valid) if valid else None
 
 
+# --------------------------
+# Start the game logic
+# --------------------------
 async def start_game_logic(client, words):
     delay = 2.5
     banned_letters = []
     min_length = 3
-    my_name = None
 
     me = await client.get_me()
-    my_name = f"{me.first_name or ''} {me.last_name or ''}".strip().lower()
+    my_variants = {me.first_name.lower()}
+    if me.last_name:
+        my_variants.add(f"{me.first_name.lower()} {me.last_name.lower()}")
+    if me.username:
+        my_variants.add(me.username.lower())
+    my_variants.add(str(me.id))
 
-    print(f"🧩 Listening for turns belonging to: {my_name}")
+    print(f"🧩 Listening for turns belonging to: {', '.join(my_variants)}")
 
     @client.on(events.NewMessage)
     async def on_message(event):
@@ -45,29 +58,30 @@ async def start_game_logic(client, words):
         if not text:
             return
 
-        # Detect "turn" message and only act on your turn
+        # 1️⃣ Only act when it's OUR turn
         if "turn" in text:
-            if my_name not in text:
-                # Not your turn
-                return
+            if not any(name in text for name in my_variants):
+                return  # skip others' turns
+        else:
+            return  # ignore unrelated messages
 
-        # Detect banned letters
+        # 2️⃣ Detect banned letters
         if "banned letters" in text:
-            letters = re.findall(r"[a-z]", text)
+            letters = re.findall(r"[a-z]", text.split("banned letters:")[-1])
             banned_letters[:] = letters
             print(f"🚫 Banned letters: {banned_letters}")
 
-        # Detect minimum length
+        # 3️⃣ Detect minimum length
         m = re.search(r"at least (\d+) letters", text)
         if m:
             min_length = int(m.group(1))
             print(f"🔤 Minimum length: {min_length}")
 
-        # Detect required letter
+        # 4️⃣ Detect required letter
         include_match = re.search(r"include[^a-z]*([a-z])", text)
         include = include_match.group(1) if include_match else ""
 
-        # Detect starting letter
+        # 5️⃣ Detect starting letter
         prefix_match = re.search(r"start[^a-z]*with[^a-z]*([a-z])", text)
         if prefix_match:
             prefix = prefix_match.group(1)
@@ -77,9 +91,12 @@ async def start_game_logic(client, words):
                 await client.send_message(event.chat_id, word)
                 print(f"💬 Sent word: {word}")
             else:
-                print(f"⚠️ No valid word for prefix={prefix}, include={include}")
+                print(f"⚠️ No valid word found for start='{prefix}', include='{include}'")
 
 
+# --------------------------
+# Start userbot instance
+# --------------------------
 async def _start_userbot(session_string, user_id):
     try:
         client = TelegramClient(StringSession(session_string), config.API_ID, config.API_HASH)

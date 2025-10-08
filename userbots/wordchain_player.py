@@ -55,8 +55,12 @@ async def start_game_logic(client, words):
         clean_name = re.sub(r"[^a-zA-Z0-9 ]", "", my_name).strip().lower()
         return clean_name in current_turn or str(my_id) in current_turn
 
-    # --- Listen to messages in WordChain group only ---
-    @client.on(events.NewMessage(chats=config.WORDCHAIN_GROUP))
+    # --- Only monitor messages in configured WordChain group ---
+    target_chat = getattr(config, "WORDCHAIN_GROUP", None)
+    if not target_chat:
+        print("⚠️ WORDCHAIN_GROUP not set — listening to all chats for testing.")
+
+    @client.on(events.NewMessage(chats=target_chat))
     async def on_message(event):
         nonlocal banned_letters, min_length, skip_cooldown, current_round
         text = event.raw_text or ""
@@ -144,6 +148,7 @@ async def _start_userbot(session_string, user_id):
         try:
             db.delete_session(user_id)
             print(f"🧹 Session auto-removed for {user_id}")
+
             from pyrogram import Client
             bot = Client("cleanup_notifier", bot_token=config.BOT_TOKEN, api_id=config.API_ID, api_hash=config.API_HASH)
             await bot.start()

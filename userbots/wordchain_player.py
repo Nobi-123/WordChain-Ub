@@ -1,4 +1,4 @@
-# userbots/wordchain_player.py — Auto name detection version
+# userbots/wordchain_player.py — Auto WordChain Player (Smart Detection)
 import asyncio
 import random
 import re
@@ -6,7 +6,7 @@ from telethon import TelegramClient, events
 from telethon.sessions import StringSession
 import config
 
-# ---- Load word list ----
+
 def import_words(path):
     try:
         with open(path, "r", encoding="utf-8") as f:
@@ -15,7 +15,7 @@ def import_words(path):
         print("❌ words.txt not found!")
         return []
 
-# ---- Pick a valid word ----
+
 def get_word(dictionary, prefix, include="", banned=None, min_len=3):
     banned = banned or []
     valid = [
@@ -27,80 +27,71 @@ def get_word(dictionary, prefix, include="", banned=None, min_len=3):
     ]
     return random.choice(valid) if valid else None
 
-# ---- Main logic ----
+
 async def start_game_logic(client, words):
     delay = 2.5
-    banned_letters, min_length = [], 3
+    banned_letters = []
+    min_length = 3
+    my_name = None
 
     me = await client.get_me()
-    print(f"🧩 Userbot ready: {me.first_name} ({me.id})")
+    my_name = f"{me.first_name or ''} {me.last_name or ''}".strip().lower()
+
+    print(f"🧩 Listening for turns belonging to: {my_name}")
 
     @client.on(events.NewMessage)
     async def on_message(event):
-        text = event.raw_text or ""
+        text = (event.raw_text or "").lower()
         if not text:
             return
 
-        low = text.lower()
+        # Detect "turn" message and only act on your turn
+        if "turn" in text:
+            if my_name not in text:
+                # Not your turn
+                return
 
-        # Ignore irrelevant messages
-        if "turn:" not in low and "your word must" not in low:
-            return
-
-        # 🧠 Always fetch the latest Telegram name in case it changed
-        me_now = await client.get_me()
-        current_names = {
-            me_now.first_name.lower(),
-            f"{me_now.first_name} {me_now.last_name}".lower() if me_now.last_name else "",
-        }
-
-        # --- Turn detection ---
-        if "turn:" in low:
-            m = re.search(r"turn[:\s]*([A-Za-z0-9_ ]+)", text, re.IGNORECASE)
-            if m:
-                turn_name = m.group(1).strip().lower()
-                if not any(name and name in turn_name for name in current_names):
-                    return  # not your turn → skip
-
-        # --- Parse rules ---
-        if "banned letters:" in low:
-            banned_letters[:] = re.findall(r"[a-z]", low.split("banned letters:")[-1])
+        # Detect banned letters
+        if "banned letters" in text:
+            letters = re.findall(r"[a-z]", text)
+            banned_letters[:] = letters
             print(f"🚫 Banned letters: {banned_letters}")
 
-        m = re.search(r"at least (\d+) letters", text, re.IGNORECASE)
+        # Detect minimum length
+        m = re.search(r"at least (\d+) letters", text)
         if m:
             min_length = int(m.group(1))
             print(f"🔤 Minimum length: {min_length}")
 
-        include_match = re.search(r"include[^A-Za-z]*([A-Za-z])", text, re.IGNORECASE)
-        include = include_match.group(1).lower() if include_match else ""
+        # Detect required letter
+        include_match = re.search(r"include[^a-z]*([a-z])", text)
+        include = include_match.group(1) if include_match else ""
 
-        prefix_match = re.search(r"start[^A-Za-z]*with[^A-Za-z]*([A-Za-z])", text, re.IGNORECASE)
-        if not prefix_match:
-            return
+        # Detect starting letter
+        prefix_match = re.search(r"start[^a-z]*with[^a-z]*([a-z])", text)
+        if prefix_match:
+            prefix = prefix_match.group(1)
+            word = get_word(words, prefix, include, banned_letters, min_length)
+            if word:
+                await asyncio.sleep(delay)
+                await client.send_message(event.chat_id, word)
+                print(f"💬 Sent word: {word}")
+            else:
+                print(f"⚠️ No valid word for prefix={prefix}, include={include}")
 
-        prefix = prefix_match.group(1).lower()
-        word = get_word(words, prefix, include, banned_letters, min_length)
 
-        if word:
-            await asyncio.sleep(random.uniform(2.0, 3.5))
-            await client.send_message(event.chat_id, word)
-            print(f"💬 [{me_now.first_name}] played: {word}")
-        else:
-            print(f"⚠️ [{me_now.first_name}] no valid word for '{prefix}' include='{include}'")
-
-# ---- Launch userbot ----
 async def _start_userbot(session_string, user_id):
-    client = TelegramClient(StringSession(session_string), config.API_ID, config.API_HASH)
-    await client.start()
-    words = import_words(config.WORDS_PATH)
-    await start_game_logic(client, words)
-    await client.run_until_disconnected()
+    try:
+        client = TelegramClient(StringSession(session_string), config.API_ID, config.API_HASH)
+        await client.start()
+        print(f"✅ Userbot started for {user_id}")
+        words = import_words(config.WORDS_PATH)
+        await start_game_logic(client, words)
+        await client.run_until_disconnected()
+    except Exception as e:
+        print(f"❌ Error in userbot for {user_id}: {e}")
+
 
 def start_userbot(session_string, user_id):
-    try:
-        loop = asyncio.get_event_loop()
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
+    loop = asyncio.get_event_loop()
     loop.create_task(_start_userbot(session_string, user_id))
